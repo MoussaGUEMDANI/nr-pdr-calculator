@@ -3,793 +3,579 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>5G NR PDR Calculator — 3GPP TS 38.306</title>
+<title>5G NR PDR Calculator — 3GPP TS 38.214 / 38.306</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500&display=swap');
-
-  :root {
-    --bg:      #0b0e17;
-    --bg2:     #10141f;
-    --bg3:     #161c2d;
-    --bg4:     #1d2438;
-    --bg5:     #232b44;
-    --amber:   #f5a623;
-    --amber2:  #ffc35a;
-    --cyan:    #4fc3f7;
-    --cyan2:   #81d4fa;
-    --green:   #69f0ae;
-    --red:     #ef5350;
-    --fg:      #dde2f0;
-    --fg2:     #7e8aaa;
-    --fg3:     #4a5370;
-    --border:  #222c48;
-    --border2: #2d3a5c;
-    --mono:    'JetBrains Mono', monospace;
-    --sans:    'Inter', sans-serif;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: var(--mono);
-    background: var(--bg);
-    color: var(--fg);
-    min-height: 100vh;
-    font-size: 13px;
-    line-height: 1.5;
-  }
-
-  /* ── topbar */
-  #topbar {
-    background: #070a12;
-    border-bottom: 1px solid var(--border);
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  #topbar .title { color: var(--amber); font-size: 14px; font-weight: 700; }
-  #topbar .sub   { color: var(--fg3);   font-size: 11px; }
-  #topbar .rmax  {
-    margin-left: auto;
-    color: var(--fg2);
-    font-size: 11px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 3px 10px;
-  }
-  #topbar .rmax span { color: var(--cyan); }
-
-  /* ── formula banner */
-  #formula-bar {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 10px 20px;
-  }
-  #formula-bar .eq {
-    color: var(--cyan);
-    font-size: 12px;
-    white-space: nowrap;
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
-  #formula-bar .sub {
-    color: var(--fg3);
-    font-size: 10px;
-    margin-top: 3px;
-  }
-
-  /* ── main layout */
-  #main {
-    display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 0;
-    height: calc(100vh - 90px);
-  }
-
-  #left {
-    overflow-y: auto;
-    padding: 16px 16px 16px 20px;
-    border-right: 1px solid var(--border);
-  }
-
-  #right {
-    overflow-y: auto;
-    padding: 16px 20px 16px 16px;
-    background: var(--bg2);
-  }
-
-  /* ── section headers */
-  .sec-hdr {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 16px 0 8px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--amber);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .sec-hdr::before { content: '▸'; }
-  .sec-hdr::after  {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-  .sec-hdr:first-child { margin-top: 0; }
-
-  /* ── cards */
-  .card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    margin-bottom: 8px;
-  }
-  .card-hdr {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    border-radius: 6px 6px 0 0;
-    padding: 7px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .card-hdr .layer-name { color: var(--amber); font-size: 12px; font-weight: 700; }
-  .card-hdr .layer-pdr  { color: var(--green); font-size: 11px; }
-  .card-hdr .remove-btn {
-    background: none;
-    border: none;
-    color: var(--red);
-    cursor: pointer;
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    opacity: 0.7;
-    transition: opacity .15s;
-  }
-  .card-hdr .remove-btn:hover { opacity: 1; background: rgba(239,83,80,.1); }
-  .card-body {
-    padding: 12px 14px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 16px;
-  }
-
-  /* ── form fields */
-  .field { display: flex; flex-direction: column; gap: 4px; }
-  .field label {
-    font-size: 10px;
-    color: var(--fg2);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .field input, .field select {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--fg);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 5px 8px;
-    outline: none;
-    transition: border-color .15s;
-    width: 100%;
-  }
-  .field input:focus, .field select:focus { border-color: var(--cyan); }
-  .field input[type=number]::-webkit-inner-spin-button { opacity: 0.5; }
-  select option { background: var(--bg3); }
-
-  .field.full { grid-column: 1 / -1; }
-
-  /* TDD card */
-  #tdd-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 12px 14px;
-    margin-bottom: 8px;
-  }
-  #tdd-card .row {
-    display: grid;
-    grid-template-columns: 1fr 140px;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-  #tdd-card input[type=text] {
-    background: var(--bg2);
-    border: 1px solid var(--border2);
-    border-radius: 4px;
-    color: var(--cyan);
-    font-family: var(--mono);
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    padding: 6px 10px;
-    outline: none;
-    width: 100%;
-    transition: border-color .15s;
-  }
-  #tdd-card input[type=text]:focus { border-color: var(--cyan); }
-  #tdd-card input[type=number] {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--fg);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 6px 8px;
-    outline: none;
-    width: 100%;
-  }
-  #tdd-stats {
-    color: var(--amber);
-    font-size: 11px;
-    font-weight: 600;
-    margin-top: 6px;
-    min-height: 16px;
-  }
-  #tdd-hint { color: var(--fg3); font-size: 10px; margin-top: 2px; }
-
-  /* slot visualiser */
-  #slot-vis-wrap {
-    margin-top: 10px;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 6px;
-  }
-  #slot-vis {
-    display: flex;
-    gap: 2px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
-  .slot-block {
-    flex: 1;
-    min-width: 18px;
-    height: 32px;
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0;
-    transition: transform .1s;
-    cursor: default;
-    position: relative;
-  }
-  .slot-block:hover { transform: scaleY(1.08); }
-  .slot-block.D { background: #1a3a52; color: var(--cyan); border: 1px solid #2a5a7a; }
-  .slot-block.U { background: #2a1a1a; color: var(--fg3); border: 1px solid #4a2a2a; }
-  .slot-block.S { background: #3a2800; color: var(--amber); border: 1px solid #6a4a00; }
-  .slot-block[title]:hover::after {
-    content: attr(title);
-    position: absolute;
-    bottom: 36px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--bg5);
-    border: 1px solid var(--border2);
-    border-radius: 3px;
-    padding: 2px 6px;
-    font-size: 9px;
-    white-space: nowrap;
-    color: var(--fg);
-    z-index: 10;
-  }
-  #slot-vis-legend {
-    display: flex;
-    gap: 12px;
-    margin-top: 6px;
-    font-size: 10px;
-  }
-  .legend-item { display: flex; align-items: center; gap: 4px; }
-  .legend-dot {
-    width: 10px; height: 10px;
-    border-radius: 2px;
-  }
-  .legend-dot.D { background: #1a3a52; border: 1px solid #2a5a7a; }
-  .legend-dot.U { background: #2a1a1a; border: 1px solid #4a2a2a; }
-  .legend-dot.S { background: #3a2800; border: 1px solid #6a4a00; }
-
-  /* add layer btn */
-  #add-layer-btn {
-    width: 100%;
-    background: var(--bg3);
-    border: 1px dashed var(--border2);
-    border-radius: 6px;
-    color: var(--cyan2);
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 600;
-    padding: 9px;
-    cursor: pointer;
-    transition: background .15s, border-color .15s;
-    margin-bottom: 12px;
-  }
-  #add-layer-btn:hover { background: var(--bg4); border-color: var(--cyan); }
-
-  /* ── results panel */
-  #big-result {
-    background: var(--bg3);
-    border: 1px solid var(--amber);
-    border-radius: 8px;
-    padding: 18px 14px;
-    text-align: center;
-    margin-bottom: 12px;
-  }
-  #big-result .label { color: var(--fg2); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
-  #big-result .value { color: var(--amber); font-size: 42px; font-weight: 700; line-height: 1.1; margin: 4px 0 2px; }
-  #big-result .unit  { color: var(--fg2); font-size: 11px; }
-
-  .metric-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-  .metric {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 8px 10px;
-  }
-  .metric .m-label { color: var(--fg3); font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
-  .metric .m-value { color: var(--fg);  font-size: 13px; font-weight: 600; }
-  .metric .m-value.cyan  { color: var(--cyan); }
-  .metric .m-value.green { color: var(--green); }
-
-  /* breakdown table */
-  #breakdown { margin-bottom: 12px; }
-  .breakdown-row {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 7px 10px;
-    margin-bottom: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 11px;
-  }
-  .breakdown-row .br-left  { color: var(--fg2); }
-  .breakdown-row .br-right { color: var(--green); font-weight: 700; }
-
-  /* param details */
-  #param-detail { font-size: 10px; color: var(--fg3); }
-  #param-detail .pd-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 3px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  #param-detail .pd-row:last-child { border-bottom: none; }
-  #param-detail .pd-val { color: var(--cyan2); }
-
-  /* ── responsive */
-  @media (max-width: 800px) {
-    #main { grid-template-columns: 1fr; height: auto; }
-    #right { border-top: 1px solid var(--border); }
-    .card-body { grid-template-columns: 1fr; }
-  }
-
-  /* scrollbar */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--fg3); }
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+:root {
+  --bg:#0b0e17; --bg2:#10141f; --bg3:#161c2d; --bg4:#1d2438; --bg5:#232b44;
+  --amber:#f5a623; --amber2:#ffc35a; --cyan:#4fc3f7; --cyan2:#81d4fa;
+  --green:#69f0ae; --red:#ef5350; --purple:#ce93d8; --orange:#ffb74d; --blue:#90caf9;
+  --fg:#dde2f0; --fg2:#7e8aaa; --fg3:#4a5370;
+  --border:#222c48; --border2:#2d3a5c;
+  --mono:'JetBrains Mono',monospace;
+  --cQPSK:#4fc3f7; --c16:#69f0ae; --c64:#ffb74d; --c256:#ce93d8; --cBPSK:#ef9a9a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--mono);background:var(--bg);color:var(--fg);min-height:100vh;font-size:13px;line-height:1.5;}
+#topbar{background:#070a12;border-bottom:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;}
+#topbar .t{color:var(--amber);font-size:14px;font-weight:700;}
+#topbar .s{color:var(--fg3);font-size:11px;}
+#topbar .b{margin-left:auto;color:var(--fg2);font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 10px;}
+#topbar .b span{color:var(--cyan);}
+#fbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 20px;}
+#fbar .eq{color:var(--cyan);font-size:11.5px;white-space:nowrap;overflow-x:auto;}
+#fbar .sb{color:var(--fg3);font-size:10px;margin-top:3px;}
+#main{display:grid;grid-template-columns:1fr 330px;height:calc(100vh - 88px);}
+#left{overflow-y:auto;padding:13px 13px 13px 18px;border-right:1px solid var(--border);}
+#right{overflow-y:auto;padding:13px 18px 13px 13px;background:var(--bg2);}
+.sh{display:flex;align-items:center;gap:10px;margin:13px 0 6px;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;}
+.sh::before{content:'▸';}
+.sh::after{content:'';flex:1;height:1px;background:var(--border);}
+.sh:first-child{margin-top:0;}
+/* cards */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;}
+.chdr{background:var(--bg2);border-bottom:1px solid var(--border);border-radius:6px 6px 0 0;padding:6px 12px;display:flex;align-items:center;gap:8px;}
+.chdr .ln{color:var(--amber);font-size:12px;font-weight:700;flex:1;}
+.chdr .lp{color:var(--green);font-size:11px;}
+.chdr .rm{background:none;border:none;color:var(--red);cursor:pointer;font-family:var(--mono);font-size:11px;padding:2px 6px;border-radius:3px;opacity:.7;transition:opacity .15s;}
+.chdr .rm:hover{opacity:1;background:rgba(239,83,80,.1);}
+/* MCS selector row */
+.mcs-row{background:var(--bg4);border-bottom:1px solid var(--border);padding:7px 12px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;}
+.mcs-row .f{display:flex;flex-direction:column;gap:2px;}
+.mcs-row label{font-size:9px;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;}
+.mcs-row select{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--fg);font-family:var(--mono);font-size:11px;padding:4px 6px;outline:none;cursor:pointer;}
+.mcs-row select:focus{border-color:var(--amber);}
+.mcs-pills{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:1px;}
+.mp{font-size:10px;color:var(--fg2);}
+.mp span{font-weight:600;}
+/* body grid */
+.cbody{padding:9px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px 13px;}
+.f{display:flex;flex-direction:column;gap:3px;}
+.f label{font-size:9px;color:var(--fg2);font-weight:500;text-transform:uppercase;letter-spacing:.06em;}
+.f input,.f select{background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--fg);font-family:var(--mono);font-size:12px;padding:5px 8px;outline:none;transition:border-color .15s;width:100%;}
+.f input:focus,.f select:focus{border-color:var(--cyan);}
+select option{background:var(--bg3);}
+/* rate bar */
+.rbar{background:var(--bg4);border-top:1px solid var(--border);padding:6px 12px;display:flex;gap:14px;flex-wrap:wrap;font-size:10px;}
+.ri{display:flex;gap:3px;}
+.rl{color:var(--fg3);}
+.rv{color:var(--cyan2);font-weight:600;}
+.rv.g{color:var(--green);}
+.rv.a{color:var(--amber);}
+.rv.p{color:var(--purple);}
+/* TDD */
+#tcard{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:11px 13px;margin-bottom:8px;}
+#tcard .tr{display:grid;grid-template-columns:1fr 130px;gap:10px;margin-bottom:7px;}
+#tcard label{font-size:9px;color:var(--fg2);font-weight:500;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px;}
+#tcard input[type=text]{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--cyan);font-size:14px;font-weight:700;letter-spacing:.12em;padding:6px 9px;outline:none;width:100%;transition:border-color .15s;}
+#tcard input[type=text]:focus{border-color:var(--cyan);}
+#tcard input[type=number]{background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--fg);font-size:12px;padding:6px 8px;outline:none;width:100%;}
+#tdd-stats{color:var(--amber);font-size:11px;font-weight:600;margin-top:5px;min-height:15px;}
+#tdd-hint{color:var(--fg3);font-size:10px;margin-top:3px;}
+#tdd-hint span{color:var(--cyan2);cursor:pointer;text-decoration:underline dotted;}
+#tdd-hint span:hover{color:var(--cyan);}
+#svis-wrap{margin-top:9px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:5px 6px;}
+#svis{display:flex;gap:2px;overflow-x:auto;padding-bottom:1px;}
+.sv{flex:1;min-width:16px;height:28px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+.sv.D{background:#1a3a52;color:var(--cyan);border:1px solid #2a5a7a;}
+.sv.U{background:#1e1a1a;color:var(--fg3);border:1px solid #3a2a2a;}
+.sv.S{background:#3a2800;color:var(--amber);border:1px solid #6a4a00;}
+.sleg{display:flex;gap:10px;margin-top:5px;font-size:10px;}
+.ld{display:flex;align-items:center;gap:4px;}
+.ldd{width:9px;height:9px;border-radius:2px;}
+.ldd.D{background:#1a3a52;border:1px solid #2a5a7a;}
+.ldd.U{background:#1e1a1a;border:1px solid #3a2a2a;}
+.ldd.S{background:#3a2800;border:1px solid #6a4a00;}
+#add-btn{width:100%;background:var(--bg3);border:1px dashed var(--border2);border-radius:6px;color:var(--cyan2);font-family:var(--mono);font-size:12px;font-weight:600;padding:9px;cursor:pointer;transition:background .15s,border-color .15s;margin-bottom:10px;}
+#add-btn:hover{background:var(--bg4);border-color:var(--cyan);}
+/* results */
+#bigbox{background:var(--bg3);border:1px solid var(--amber);border-radius:8px;padding:14px;text-align:center;margin-bottom:10px;}
+#bigbox .bl{color:var(--fg2);font-size:9px;letter-spacing:.1em;text-transform:uppercase;}
+#bigbox .bv{color:var(--amber);font-size:40px;font-weight:700;line-height:1.1;margin:3px 0 1px;}
+#bigbox .bu{color:var(--fg2);font-size:10px;}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;}
+.mc{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:7px 9px;}
+.mc .ml{color:var(--fg3);font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.mc .mv{font-size:12px;font-weight:600;}
+.mc .mv.cy{color:var(--cyan);}
+.mc .mv.gn{color:var(--green);}
+.mc .mv.am{color:var(--amber);}
+.mc .mv.pu{color:var(--purple);}
+.brow{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 10px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;font-size:10px;}
+.brow .bl2{color:var(--fg2);}
+.brow .br2{color:var(--green);font-weight:700;}
+/* chart */
+#chartbox{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;}
+#chart-hdr{font-size:10px;color:var(--fg2);margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start;gap:6px;flex-wrap:wrap;}
+#chart-hdr .ct{color:var(--amber);font-weight:700;font-size:11px;}
+#chart-hdr .cs{color:var(--cyan);font-size:10px;}
+#mcs-svg{display:block;width:100%;overflow:visible;}
+.cleg{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.cli{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--fg2);}
+.cld{width:8px;height:8px;border-radius:50%;}
+/* full mcs table */
+#mcs-table-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;max-height:220px;overflow-y:auto;}
+#mcs-full-table{width:100%;border-collapse:collapse;font-size:10px;}
+#mcs-full-table th{color:var(--fg3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:3px 6px;border-bottom:1px solid var(--border2);text-align:left;position:sticky;top:0;background:var(--bg3);}
+#mcs-full-table td{padding:3px 6px;border-bottom:1px solid var(--border);color:var(--fg2);}
+#mcs-full-table tr.sel-row td{background:var(--bg5);color:var(--fg);}
+#mcs-full-table tr.sel-row td:first-child{color:var(--amber);font-weight:700;}
+/* param table */
+#pdtbl{font-size:10px;}
+.pdr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);}
+.pdr:last-child{border:none;}
+.pdr .pk{color:var(--fg3);}
+.pdr .pv{color:var(--cyan2);}
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--fg3);}
+@media(max-width:800px){#main{grid-template-columns:1fr;height:auto;}.cbody{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 
-<!-- topbar -->
 <div id="topbar">
-  <span class="title">5G NR  PDR  Calculator</span>
-  <span class="sub">3GPP TS 38.306 Eq.(1)</span>
-  <span class="rmax">R<sub>max</sub> = 948/1024 = <span>0.92578</span></span>
+  <span class="t">5G NR  PDR  Calculator</span>
+  <span class="s">3GPP TS 38.306 Eq.(1) + 38.214 V17.1.0 MCS Tables</span>
+  <div class="b">R<sub>max</sub> = 948/1024 = <span>0.92578</span></div>
 </div>
 
-<!-- formula bar -->
-<div id="formula-bar">
-  <div class="eq">PDR = 10⁻⁶ × Σⱼ [ v_Layers(j) · Q_m(j) · f(j) · R_max · (N_PRB(j,μ)·12 / T_s^μ) · (1 − OH(j)) ] × TDD_DL_ratio</div>
-  <div class="sub">T_s^μ = 10⁻³ / (14 × 2^μ) seconds &nbsp;|&nbsp; TDD_DL_ratio = (D_slots + S_slots × sym_DL/14) / total_slots</div>
+<div id="fbar">
+  <div class="eq">PDR_peak = 10⁻⁶ × Σⱼ[v·Q_m·f·R_max·(N_PRB·12/T_s^μ)·(1−OH)] × TDD_ratio &nbsp;|&nbsp; Rate@MCS uses actual CR from 38.214 table</div>
+  <div class="sb">T_s^μ = 10⁻³/(14·2^μ) s &nbsp;|&nbsp; SE = Q_m·(CR/1024) b/sym &nbsp;|&nbsp; Bits/slot = N_PRB·12·14·(1−OH)·Q_m·(CR/1024) &nbsp;|&nbsp; MCS_eff = CR/948 × 100%</div>
 </div>
 
-<!-- main -->
 <div id="main">
-
-  <!-- LEFT: inputs -->
-  <div id="left">
-
-    <div class="sec-hdr">TDD Slot Configuration</div>
-
-    <div id="tdd-card">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
-        <div class="field">
-          <label>Slot pattern &nbsp;(D = DL, U = UL, S = Special)</label>
-          <input type="text" id="tdd-pattern" value="DDDSUUDDDSUU" maxlength="100"
-                 placeholder="e.g. DDDDDDDSUU" spellcheck="false" autocomplete="off">
-        </div>
-        <div class="field">
-          <label>DL symbols in each S slot (0–14)</label>
-          <input type="number" id="s-dl-syms" value="6" min="0" max="14" step="1">
-        </div>
-      </div>
-      <div id="tdd-hint">
-        Common patterns: &nbsp;
-        <span class="pattern-ex" data-pat="DDDDDDDSUU" style="color:var(--cyan2);cursor:pointer;" title="ms5 TDD, DL:7 UL:2 S:1">DDDDDDDSUU</span> (ms5, 7D·1S·2U) &nbsp;|&nbsp;
-        <span class="pattern-ex" data-pat="DDSUU" style="color:var(--cyan2);cursor:pointer;" title="ms2.5">DDSUU</span> (ms2.5) &nbsp;|&nbsp;
-        <span class="pattern-ex" data-pat="DDDDDDDDDDSUUU" style="color:var(--cyan2);cursor:pointer;">DDDDDDDDDDSUUU</span> (ms10)
-      </div>
-      <div id="tdd-stats">—</div>
-      <div id="slot-vis-wrap">
-        <div id="slot-vis"></div>
-        <div id="slot-vis-legend">
-          <div class="legend-item"><div class="legend-dot D"></div><span style="color:var(--cyan)">D  Downlink</span></div>
-          <div class="legend-item"><div class="legend-dot S"></div><span style="color:var(--amber)">S  Special</span></div>
-          <div class="legend-item"><div class="legend-dot U"></div><span style="color:var(--fg3)">U  Uplink</span></div>
-        </div>
+<div id="left">
+  <div class="sh">TDD Slot Configuration</div>
+  <div id="tcard">
+    <div class="tr">
+      <div><label>Slot pattern (D = DL, U = UL, S = Special)</label>
+        <input type="text" id="tdd-pat" value="DDDSUUDDDSUU" maxlength="80" spellcheck="false" autocomplete="off"></div>
+      <div><label>DL symbols in S slot (0–14)</label>
+        <input type="number" id="s-dl" value="6" min="0" max="14" step="1"></div>
+    </div>
+    <div id="tdd-hint">Quick load: &nbsp;
+      <span data-p="DDDDDDDSUU">DDDDDDDSUU</span> (ms5 7D·1S·2U) &nbsp;|&nbsp;
+      <span data-p="DDSUU">DDSUU</span> (ms2.5) &nbsp;|&nbsp;
+      <span data-p="DDDDDDDDDDSUUU">DDDDDDDDDDSUUU</span> (ms10) &nbsp;|&nbsp;
+      <span data-p="DDDSUUDDDSUU">DDDSUUDDDSUU</span> (2×ms5)
+    </div>
+    <div id="tdd-stats">—</div>
+    <div id="svis-wrap">
+      <div id="svis"></div>
+      <div class="sleg">
+        <div class="ld"><div class="ldd D"></div><span style="color:var(--cyan)">D Downlink</span></div>
+        <div class="ld"><div class="ldd S"></div><span style="color:var(--amber)">S Special</span></div>
+        <div class="ld"><div class="ldd U"></div><span style="color:var(--fg3)">U Uplink</span></div>
       </div>
     </div>
-
-    <div class="sec-hdr">Component Carriers / Layers <span id="layer-count" style="color:var(--fg2);margin-left:4px;">(J = 1)</span></div>
-
-    <div id="layers-container"></div>
-
-    <button id="add-layer-btn">+ Add Component Carrier / Layer</button>
-
   </div>
 
-  <!-- RIGHT: results -->
-  <div id="right">
+  <div class="sh">Layers / Component Carriers &nbsp;<span id="jlbl" style="color:var(--fg2);font-weight:400">(J=1)</span></div>
+  <div id="layers"></div>
+  <button id="add-btn">+ Add Component Carrier / Layer</button>
+</div>
 
-    <div class="sec-hdr">Effective PDR</div>
-
-    <div id="big-result">
-      <div class="label">Peak Data Rate</div>
-      <div class="value" id="res-big">—</div>
-      <div class="unit">Mbps  (PHY layer, DL peak)</div>
-    </div>
-
-    <div class="metric-grid">
-      <div class="metric">
-        <div class="m-label">TDD DL ratio</div>
-        <div class="m-value cyan" id="res-ratio">—</div>
-      </div>
-      <div class="metric">
-        <div class="m-label">PDR (no TDD)</div>
-        <div class="m-value" id="res-pdr-full">—</div>
-      </div>
-      <div class="metric">
-        <div class="m-label">PDR × TDD</div>
-        <div class="m-value green" id="res-pdr-eff">—</div>
-      </div>
-      <div class="metric">
-        <div class="m-label">DL slots / period</div>
-        <div class="m-value" id="res-slots">—</div>
-      </div>
-    </div>
-
-    <div class="sec-hdr">Per-Layer Breakdown</div>
-    <div id="breakdown"></div>
-
-    <div class="sec-hdr">Key Parameters</div>
-    <div id="param-detail"></div>
-
+<div id="right">
+  <div class="sh">Effective PDR</div>
+  <div id="bigbox">
+    <div class="bl">Peak Data Rate (TS 38.306 — R_max = 948/1024)</div>
+    <div class="bv" id="r-peak">—</div>
+    <div class="bu">Mbps  &nbsp;PHY DL peak</div>
   </div>
+  <div class="mgrid">
+    <div class="mc"><div class="ml">TDD DL ratio</div>    <div class="mv cy" id="r-ratio">—</div></div>
+    <div class="mc"><div class="ml">PDR (no TDD)</div>    <div class="mv"    id="r-notdd">—</div></div>
+    <div class="mc"><div class="ml">Rate @ MCS (×TDD)</div><div class="mv gn" id="r-mcs">—</div></div>
+    <div class="mc"><div class="ml">MCS efficiency</div>  <div class="mv am" id="r-eff">—</div></div>
+  </div>
+
+  <div class="sh">Per-Layer Breakdown</div>
+  <div id="bdown"></div>
+
+  <div class="sh">MCS Spectral Efficiency Chart &nbsp;<span id="chart-tname" style="color:var(--fg2);font-weight:400;font-size:9px;"></span></div>
+  <div id="chartbox">
+    <div id="chart-hdr">
+      <span class="ct" id="chart-tbl">—</span>
+      <span class="cs" id="chart-sel">—</span>
+    </div>
+    <svg id="mcs-svg" height="140"></svg>
+    <div class="cleg" id="chart-leg"></div>
+  </div>
+
+  <div class="sh">Full MCS Reference Table &nbsp;<span id="mcs-tbl-name" style="color:var(--fg2);font-weight:400;font-size:9px;"></span></div>
+  <div id="mcs-table-wrap">
+    <table id="mcs-full-table">
+      <thead><tr><th>MCS</th><th>Mod</th><th>Q_m</th><th>CR×1024</th><th>SE b/sym</th><th>% of R_max</th></tr></thead>
+      <tbody id="mcs-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="sh">Key Parameters (Layer 1)</div>
+  <div id="pdtbl"></div>
+</div>
 </div>
 
 <script>
 "use strict";
 
-// ── constants
-const R_MAX = 948 / 1024;
-
-const MOD_OPTIONS = [
-  { label: "QPSK  (Qm = 2)",    qm: 2 },
-  { label: "16-QAM  (Qm = 4)",  qm: 4 },
-  { label: "64-QAM  (Qm = 6)",  qm: 6 },
-  { label: "256-QAM  (Qm = 8)", qm: 8 },
-];
-
-const MU_OPTIONS = [
-  { label: "μ=0   15 kHz",  mu: 0 },
-  { label: "μ=1   30 kHz",  mu: 1 },
-  { label: "μ=2   60 kHz",  mu: 2 },
-  { label: "μ=3  120 kHz",  mu: 3 },
-];
-
-const F_OPTIONS = [1.0, 0.8, 0.75, 0.4];
-
-const OH_PRESETS = {
-  "DL FR1  14%": 14,
-  "DL FR2  18%": 18,
-  "UL FR1   8%": 8,
-  "UL FR2  10%": 10,
-  "Custom":      14,
+// ══════════════════════ 3GPP TS 38.214 V17.1.0 MCS TABLES
+// [mcsIdx, modLabel, Qm, CR×1024, spectralEff]
+const TBLS = {
+  T1:{name:"Table 5.1.3.1-1 / 6.1.4.1-1  PDSCH/PUSCH  64QAM max",short:"64QAM (Tbl 1)",
+    rows:[[0,"QPSK",2,120,0.2344],[1,"QPSK",2,157,0.3066],[2,"QPSK",2,193,0.3770],
+      [3,"QPSK",2,251,0.4902],[4,"QPSK",2,308,0.6016],[5,"QPSK",2,379,0.7402],
+      [6,"QPSK",2,449,0.8770],[7,"QPSK",2,526,1.0273],[8,"QPSK",2,602,1.1758],
+      [9,"QPSK",2,679,1.3262],[10,"16QAM",4,340,1.3281],[11,"16QAM",4,378,1.4766],
+      [12,"16QAM",4,434,1.6953],[13,"16QAM",4,490,1.9141],[14,"16QAM",4,553,2.1602],
+      [15,"16QAM",4,616,2.4063],[16,"16QAM",4,658,2.5703],[17,"64QAM",6,438,2.5664],
+      [18,"64QAM",6,466,2.7305],[19,"64QAM",6,517,3.0293],[20,"64QAM",6,567,3.3223],
+      [21,"64QAM",6,616,3.6094],[22,"64QAM",6,666,3.9023],[23,"64QAM",6,719,4.2129],
+      [24,"64QAM",6,772,4.5234],[25,"64QAM",6,822,4.8164],[26,"64QAM",6,873,5.1152],
+      [27,"64QAM",6,910,5.3320],[28,"64QAM",6,948,5.5547]]},
+  T2:{name:"Table 5.1.3.1-2 / 6.1.4.1-2  PDSCH/PUSCH  256QAM max",short:"256QAM (Tbl 2)",
+    rows:[[0,"QPSK",2,120,0.2344],[1,"QPSK",2,193,0.3770],[2,"QPSK",2,308,0.6016],
+      [3,"QPSK",2,449,0.8770],[4,"QPSK",2,602,1.1758],[5,"16QAM",4,378,1.4766],
+      [6,"16QAM",4,434,1.6953],[7,"16QAM",4,490,1.9141],[8,"16QAM",4,553,2.1602],
+      [9,"16QAM",4,616,2.4063],[10,"16QAM",4,658,2.5703],[11,"64QAM",6,466,2.7305],
+      [12,"64QAM",6,517,3.0293],[13,"64QAM",6,567,3.3223],[14,"64QAM",6,616,3.6094],
+      [15,"64QAM",6,666,3.9023],[16,"64QAM",6,719,4.2129],[17,"64QAM",6,772,4.5234],
+      [18,"64QAM",6,822,4.8164],[19,"64QAM",6,873,5.1152],[20,"256QAM",8,682.5,5.3320],
+      [21,"256QAM",8,711,5.5547],[22,"256QAM",8,754,5.8906],[23,"256QAM",8,797,6.2266],
+      [24,"256QAM",8,841,6.5703],[25,"256QAM",8,885,6.9141],[26,"256QAM",8,916.5,7.1602],
+      [27,"256QAM",8,948,7.4063]]},
+  T3:{name:"Table 5.1.3.1-3  PDSCH  Low SE  64QAM max",short:"Low SE (Tbl 3)",
+    rows:[[0,"QPSK",2,30,0.0586],[1,"QPSK",2,40,0.0781],[2,"QPSK",2,50,0.0977],
+      [3,"QPSK",2,64,0.1250],[4,"QPSK",2,78,0.1523],[5,"QPSK",2,99,0.1934],
+      [6,"QPSK",2,120,0.2344],[7,"QPSK",2,157,0.3066],[8,"QPSK",2,193,0.3770],
+      [9,"QPSK",2,251,0.4902],[10,"QPSK",2,308,0.6016],[11,"QPSK",2,379,0.7402],
+      [12,"QPSK",2,449,0.8770],[13,"QPSK",2,526,1.0273],[14,"QPSK",2,602,1.1758],
+      [15,"16QAM",4,340,1.3281],[16,"16QAM",4,378,1.4766],[17,"16QAM",4,434,1.6953],
+      [18,"16QAM",4,490,1.9141],[19,"16QAM",4,553,2.1602],[20,"16QAM",4,616,2.4063],
+      [21,"64QAM",6,438,2.5664],[22,"64QAM",6,466,2.7305],[23,"64QAM",6,517,3.0293],
+      [24,"64QAM",6,567,3.3223],[25,"64QAM",6,616,3.6094],[26,"64QAM",6,666,3.9023],
+      [27,"64QAM",6,719,4.2129],[28,"64QAM",6,772,4.5234]]},
+  T4:{name:"Table 6.1.4.1-3  PUSCH  Transform Precoding  π/2-BPSK",short:"PUSCH π/2-BPSK (Tbl 4)",
+    rows:[[0,"π/2-BPSK",1,60,0.0586],[1,"π/2-BPSK",1,80,0.0781],[2,"π/2-BPSK",1,100,0.0977],
+      [3,"π/2-BPSK",1,128,0.1250],[4,"π/2-BPSK",1,156,0.1523],[5,"π/2-BPSK",1,198,0.1934],
+      [6,"QPSK",2,120,0.2344],[7,"QPSK",2,157,0.3066],[8,"QPSK",2,193,0.3770],
+      [9,"QPSK",2,251,0.4902],[10,"QPSK",2,308,0.6016],[11,"QPSK",2,379,0.7402],
+      [12,"QPSK",2,449,0.8770],[13,"QPSK",2,526,1.0273],[14,"QPSK",2,602,1.1758],
+      [15,"16QAM",4,340,1.3281],[16,"16QAM",4,378,1.4766],[17,"16QAM",4,434,1.6953],
+      [18,"16QAM",4,490,1.9141],[19,"16QAM",4,553,2.1602],[20,"16QAM",4,616,2.4063],
+      [21,"64QAM",6,438,2.5664],[22,"64QAM",6,466,2.7305],[23,"64QAM",6,517,3.0293],
+      [24,"64QAM",6,567,3.3223],[25,"64QAM",6,616,3.6094],[26,"64QAM",6,666,3.9023],
+      [27,"64QAM",6,719,4.2129],[28,"64QAM",6,772,4.5234]]}
 };
 
-// ── physics
-function Ts(mu) { return 1e-3 / (14 * Math.pow(2, mu)); }
+const MOD_HEX={"QPSK":"#4fc3f7","16QAM":"#69f0ae","64QAM":"#ffb74d","256QAM":"#ce93d8","π/2-BPSK":"#ef9a9a"};
+const TBL_KEYS=Object.keys(TBLS);
+const R_MAX=948/1024;
 
-function tddRatio(pattern, sDlSyms) {
-  const pat = pattern.trim().toUpperCase();
-  if (!pat) return { ratio: 1, nD: 0, nS: 0, nU: 0, total: 0, dlEq: 0 };
-  let nD = 0, nS = 0, nU = 0;
-  for (const ch of pat) {
-    if (ch === 'D') nD++;
-    else if (ch === 'S') nS++;
-    else if (ch === 'U') nU++;
-  }
-  const total = pat.length;
-  const dlEq  = nD + nS * (sDlSyms / 14);
-  return { ratio: dlEq / total, nD, nS, nU, total, dlEq };
+// ══════════════════════ PHYSICS
+const Ts=mu=>1e-3/(14*Math.pow(2,mu));
+function tddRatio(pat,sDl){
+  const p=pat.trim().toUpperCase();
+  if(!p)return{ratio:1,nD:0,nS:0,nU:0,total:0,dlEq:0};
+  let nD=0,nS=0,nU=0;
+  for(const c of p){if(c==='D')nD++;else if(c==='S')nS++;else if(c==='U')nU++;}
+  const total=p.length,dlEq=nD+nS*(sDl/14);
+  return{ratio:dlEq/total,nD,nS,nU,total,dlEq};
+}
+const pdrPeak=(v,r)=>1e-6*v.v*v.qm*v.f*R_MAX*(v.nprb*12/Ts(v.mu))*(1-v.oh)*r;
+const pdrMCS =(v,r)=>1e-6*v.v*v.qm*v.f*(v.cr/1024)*(v.nprb*12/Ts(v.mu))*(1-v.oh)*r;
+const bitsPS =(v)=>v.nprb*12*14*(1-v.oh)*v.qm*(v.cr/1024);
+
+// ══════════════════════ LAYER FACTORY
+let lctr=0,layers=[];
+const MU_OPTS=[{l:"μ=0  15 kHz",v:0},{l:"μ=1  30 kHz",v:1},{l:"μ=2  60 kHz",v:2},{l:"μ=3  120 kHz",v:3}];
+const F_OPTS=[1.0,0.8,0.75,0.4];
+const OH_PRE={"DL FR1 14%":14,"DL FR2 18%":18,"UL FR1 8%":8,"UL FR2 10%":10,"Custom":14};
+
+function mkSel(opts,defIdx=0){
+  const s=document.createElement('select');
+  opts.forEach((o,i)=>{const x=document.createElement('option');x.value=i;x.textContent=typeof o==='string'?o:o.l;s.appendChild(x);});
+  s.selectedIndex=defIdx; return s;
+}
+function mkNum(def,min,max,step=1){
+  const i=document.createElement('input');i.type='number';i.value=def;i.min=min;i.max=max;i.step=step;return i;
+}
+function mkField(label,widget,full=false){
+  const d=document.createElement('div');d.className=full?'f':' f';
+  const l=document.createElement('label');l.textContent=label;
+  d.append(l,widget);return d;
+}
+function buildMCSSel(tkey,defIdx=0){
+  const tbl=TBLS[tkey];
+  return mkSel(tbl.rows.map(r=>`MCS ${String(r[0]).padStart(2)} — ${r[1]}  SE=${r[4].toFixed(4)}`),defIdx);
 }
 
-function computePDR(layers, ratio) {
-  let total = 0;
-  const perLayer = layers.map(L => {
-    const ts   = Ts(L.mu);
-    const bits = L.v * L.qm * L.f * R_MAX * (L.nprb * 12 / ts) * (1 - L.oh);
-    const val  = 1e-6 * bits * ratio;
-    total += val;
-    return val;
-  });
-  return { total, perLayer };
-}
-
-// ── layer management
-let layerIdCounter = 0;
-let layers = [];  // [{id, el, getValues}]
-
-function createLayerCard(id) {
-  const num = id;
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.dataset.id = id;
+function createLayer(){
+  lctr++;const id=lctr;
+  const el=document.createElement('div');el.className='card';el.dataset.id=id;
 
   // header
-  const hdr = document.createElement('div');
-  hdr.className = 'card-hdr';
-  hdr.innerHTML = `
-    <span class="layer-name">Layer ${num}</span>
-    <span class="layer-pdr" id="lpdr-${id}"></span>
-    <button class="remove-btn" title="Remove layer">✕ remove</button>
-  `;
-  hdr.querySelector('.remove-btn').addEventListener('click', () => removeLayer(id));
+  const hdr=document.createElement('div');hdr.className='chdr';
+  hdr.innerHTML=`<span class="ln">Layer ${id}</span><span class="lp" id="lp-${id}"></span>`;
+  const rm=document.createElement('button');rm.className='rm';rm.textContent='✕ remove';
+  rm.onclick=()=>removeLayer(id);hdr.appendChild(rm);el.appendChild(hdr);
+
+  // MCS row
+  const mrow=document.createElement('div');mrow.className='mcs-row';
+  const tf=document.createElement('div');tf.className='f';
+  const tl=document.createElement('label');tl.textContent='38.214 MCS Table';
+  const tSel=mkSel(TBL_KEYS.map(k=>TBLS[k].short),1);// default Table 2
+  tf.append(tl,tSel);
+  const mf=document.createElement('div');mf.className='f';
+  const ml=document.createElement('label');ml.textContent='MCS Index';
+  let mSel=buildMCSSel('T2',25);// default MCS 25
+  mf.append(ml,mSel);
+  const pills=document.createElement('div');pills.className='mcs-pills';
+  pills.innerHTML=`<span class="mp">Mod:<span id="pm-${id}">—</span></span>`+
+    `<span class="mp">Q_m:<span id="pq-${id}">—</span></span>`+
+    `<span class="mp">CR:<span id="pc-${id}">—</span></span>`+
+    `<span class="mp">SE:<span id="ps-${id}">—</span> b/sym</span>`;
+  mrow.append(tf,mf,pills);el.appendChild(mrow);
 
   // body
-  const body = document.createElement('div');
-  body.className = 'card-body';
+  const body=document.createElement('div');body.className='cbody';
+  const cb=()=>refresh();
+  const vI=mkNum(1,1,8);vI.addEventListener('input',cb);
+  const fS=mkSel(F_OPTS.map(String));fS.addEventListener('change',cb);
+  const nI=mkNum(217,1,275);nI.addEventListener('input',cb);
+  const muS=mkSel(MU_OPTS.map(o=>o.l),1);muS.addEventListener('change',cb);
+  const ohP=mkSel(Object.keys(OH_PRE));
+  const ohV=mkNum(14,0,50,0.5);
+  ohP.addEventListener('change',()=>{const k=Object.keys(OH_PRE)[ohP.selectedIndex];if(k!=='Custom')ohV.value=OH_PRE[k];cb();});
+  ohV.addEventListener('input',cb);
+  body.append(
+    mkField('v_Layers (MIMO layers)',vI),mkField('f (scaling factor)',fS),
+    mkField('N_PRB (allocated PRBs)',nI),mkField('SCS μ',muS),
+    mkField('OH — preset',ohP),mkField('OH value (%)',ohV));
+  el.appendChild(body);
 
-  function sel(label, opts, val, onChange) {
-    const d = document.createElement('div');
-    d.className = 'field';
-    const lbl = document.createElement('label');
-    lbl.textContent = label;
-    const s = document.createElement('select');
-    opts.forEach((o, i) => {
-      const opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = typeof o === 'string' ? o : o.label;
-      if ((typeof o === 'object' && o.default) || val === i) opt.selected = true;
-      s.appendChild(opt);
-    });
-    s.addEventListener('change', onChange);
-    d.appendChild(lbl); d.appendChild(s);
-    return { el: d, sel: s };
+  // rate bar
+  const rb=document.createElement('div');rb.className='rbar';
+  rb.innerHTML=`<div class="ri"><span class="rl">Bits/slot:</span><span class="rv" id="rb1-${id}">—</span></div>`+
+    `<div class="ri"><span class="rl">Bits/PRB:</span><span class="rv" id="rb2-${id}">—</span></div>`+
+    `<div class="ri"><span class="rl">SE:</span><span class="rv p" id="rb3-${id}">—</span></div>`+
+    `<div class="ri"><span class="rl">Rate@MCS:</span><span class="rv g" id="rb4-${id}">—</span></div>`+
+    `<div class="ri"><span class="rl">Peak:</span><span class="rv a" id="rb5-${id}">—</span></div>`;
+  el.appendChild(rb);
+
+  function rebuildMCSSel(){
+    const key=TBL_KEYS[tSel.selectedIndex];
+    const prev=Math.min(mSel.selectedIndex,TBLS[key].rows.length-1);
+    const ns=buildMCSSel(key,prev);
+    mSel.replaceWith(ns);mSel=ns;mf.appendChild(mSel);
+    mSel.addEventListener('change',cb);cb();
+  }
+  tSel.addEventListener('change',rebuildMCSSel);
+  mSel.addEventListener('change',cb);
+
+  function getV(){
+    const key=TBL_KEYS[tSel.selectedIndex];
+    const row=TBLS[key].rows[mSel.selectedIndex];
+    return{id,key,tbl:TBLS[key],mcs:row[0],mod:row[1],qm:row[2],cr:row[3],se:row[4],
+      v:parseInt(vI.value)||1,f:F_OPTS[fS.selectedIndex],
+      nprb:parseInt(nI.value)||1,mu:MU_OPTS[muS.selectedIndex].v,
+      oh:(parseFloat(ohV.value)||0)/100};
   }
 
-  function num_field(label, def, min, max, step, onChange, full=false) {
-    const d = document.createElement('div');
-    d.className = full ? 'field full' : 'field';
-    const lbl = document.createElement('label');
-    lbl.textContent = label;
-    const inp = document.createElement('input');
-    inp.type = 'number'; inp.value = def;
-    inp.min = min; inp.max = max; inp.step = step;
-    inp.addEventListener('input', onChange);
-    d.appendChild(lbl); d.appendChild(inp);
-    return { el: d, inp };
-  }
+  document.getElementById('layers').appendChild(el);
 
-  const cb = () => refresh();
-
-  // v_Layers
-  const vF = num_field('v_Layers  (MIMO layers)', 1, 1, 8, 1, cb);
-
-  // Modulation
-  const qmF = sel('Modulation  Q_m', MOD_OPTIONS.map(o=>o.label), 3, cb);
-  qmF.sel.selectedIndex = 3; // 256-QAM default
-
-  // f scaling
-  const fF = sel('f  (scaling factor)', F_OPTIONS.map(String), 0, cb);
-
-  // N_PRB
-  const nprbF = num_field('N_PRB  (allocated PRBs)', 217, 1, 275, 1, cb);
-
-  // SCS mu
-  const muF = sel('SCS  μ', MU_OPTIONS.map(o=>o.label), 1, cb);
-  muF.sel.selectedIndex = 1; // 30kHz default
-
-  // OH preset
-  const ohPresetF = sel('OH overhead  (preset)', Object.keys(OH_PRESETS), 0, () => {
-    const preset = Object.keys(OH_PRESETS)[parseInt(ohPresetF.sel.value)];
-    if (preset !== 'Custom') {
-      ohValF.inp.value = OH_PRESETS[preset];
+  return{id,el,getV,
+    updPills(v){
+      const mc=MOD_HEX[v.mod]||'#fff';
+      document.getElementById(`pm-${id}`).textContent=v.mod;
+      document.getElementById(`pm-${id}`).style.color=mc;
+      document.getElementById(`pq-${id}`).textContent=v.qm;
+      document.getElementById(`pc-${id}`).textContent=`${v.cr}/1024`;
+      document.getElementById(`ps-${id}`).textContent=v.se.toFixed(4);
+    },
+    updRateBar(v,ratio,pk,mc){
+      const bps=bitsPS(v);
+      document.getElementById(`rb1-${id}`).textContent=(bps/1000).toFixed(2)+' kbits';
+      document.getElementById(`rb2-${id}`).textContent=(bps/v.nprb).toFixed(1)+' bits';
+      document.getElementById(`rb3-${id}`).textContent=v.se.toFixed(4)+' b/sym';
+      document.getElementById(`rb4-${id}`).textContent=mc.toFixed(2)+' Mbps';
+      document.getElementById(`rb5-${id}`).textContent=pk.toFixed(2)+' Mbps';
+      document.getElementById(`lp-${id}`).textContent=`${mc.toFixed(2)} / ${pk.toFixed(2)} Mbps`;
     }
-    cb();
-  });
-
-  // OH value
-  const ohValF = num_field('OH value  (%)', 14, 0, 50, 0.5, cb);
-
-  [vF, qmF, fF, nprbF, muF, ohPresetF, ohValF].forEach(f => body.appendChild(f.el));
-
-  card.appendChild(hdr);
-  card.appendChild(body);
-
-  function getValues() {
-    return {
-      v:    parseInt(vF.inp.value)    || 1,
-      qm:   MOD_OPTIONS[parseInt(qmF.sel.value)].qm,
-      f:    F_OPTIONS[parseInt(fF.sel.value)],
-      nprb: parseInt(nprbF.inp.value) || 1,
-      mu:   MU_OPTIONS[parseInt(muF.sel.value)].mu,
-      oh:   (parseFloat(ohValF.inp.value) || 0) / 100,
-    };
-  }
-
-  return { id, el: card, getValues,
-           setLabel: (txt) => { document.getElementById(`lpdr-${id}`).textContent = txt; } };
+  };
 }
 
-function addLayer() {
-  layerIdCounter++;
-  const L = createLayerCard(layerIdCounter);
-  layers.push(L);
-  document.getElementById('layers-container').appendChild(L.el);
-  refresh();
+function addLayer(){layers.push(createLayer());refresh();}
+function removeLayer(id){
+  if(layers.length<=1)return;
+  layers=layers.filter(L=>L.id!==id);
+  document.querySelector(`.card[data-id="${id}"]`).remove();refresh();
 }
 
-function removeLayer(id) {
-  if (layers.length <= 1) return;
-  layers = layers.filter(L => L.id !== id);
-  const el = document.querySelector(`.card[data-id="${id}"]`);
-  if (el) el.remove();
-  refresh();
-}
-
-// ── TDD inputs
-const tddPatEl   = document.getElementById('tdd-pattern');
-const sDlSymsEl  = document.getElementById('s-dl-syms');
-const tddStatsEl = document.getElementById('tdd-stats');
-const slotVisEl  = document.getElementById('slot-vis');
-
-tddPatEl.addEventListener('input', refresh);
-sDlSymsEl.addEventListener('input', refresh);
-
-// pattern shortcuts
-document.querySelectorAll('.pattern-ex').forEach(el => {
-  el.addEventListener('click', () => {
-    tddPatEl.value = el.dataset.pat;
-    refresh();
-  });
+// ══════════════════════ TDD
+document.getElementById('tdd-pat').addEventListener('input',refresh);
+document.getElementById('s-dl').addEventListener('input',refresh);
+document.querySelectorAll('#tdd-hint span[data-p]').forEach(s=>{
+  s.addEventListener('click',()=>{document.getElementById('tdd-pat').value=s.dataset.p;refresh();});
 });
 
-// ── slot visualiser
-function drawSlots(pattern, sDlSyms) {
-  const pat = pattern.trim().toUpperCase();
-  slotVisEl.innerHTML = '';
-  if (!pat) return;
-  for (const ch of pat) {
-    const blk = document.createElement('div');
-    blk.className = `slot-block ${['D','U','S'].includes(ch) ? ch : 'U'}`;
-    blk.textContent = ch;
-    let tip = '';
-    if (ch === 'D') tip = 'Full DL  (14/14 sym)';
-    else if (ch === 'U') tip = 'Full UL  (0/14 DL sym)';
-    else if (ch === 'S') tip = `Special  (${sDlSyms}/14 DL sym)`;
-    blk.title = tip;
-    slotVisEl.appendChild(blk);
+function drawSlots(pat,sDl){
+  const vis=document.getElementById('svis');vis.innerHTML='';
+  for(const c of pat.toUpperCase()){
+    if(!'DSU'.includes(c))continue;
+    const b=document.createElement('div');b.className=`sv ${c}`;b.textContent=c;
+    b.title=c==='D'?'Full DL (14/14)':c==='S'?`Special (${sDl}/14 DL sym)`:'Full UL';
+    vis.appendChild(b);
   }
 }
 
-// ── main refresh
-function refresh() {
-  const pattern  = tddPatEl.value;
-  const sDlSyms  = Math.min(14, Math.max(0, parseInt(sDlSymsEl.value) || 0));
-  const { ratio, nD, nS, nU, total, dlEq } = tddRatio(pattern, sDlSyms);
+// ══════════════════════ MCS CHART
+function drawChart(tkey,selIdx){
+  const tbl=TBLS[tkey];const rows=tbl.rows;
+  const maxSE=Math.max(...rows.map(r=>r[4]));
+  const svg=document.getElementById('mcs-svg');
+  const W=Math.max(200,svg.parentElement.clientWidth-22);
+  const H=130;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);
+  const bw=Math.max(2,Math.floor((W-4)/rows.length)-1);
+  const gap=Math.floor((W-4)/rows.length);
+  let out='';
+  // gridlines
+  [0,1,2,3,4,5,6,7,8].forEach(v=>{
+    if(v>maxSE+0.3)return;
+    const y=(H-22)-(v/8)*(H-30);
+    out+=`<line x1="0" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}" stroke="#1d2438" stroke-width="0.8"/>`;
+    if(v%2===0)out+=`<text x="1" y="${(y-1.5).toFixed(1)}" fill="#4a5370" font-size="7" font-family="monospace">${v}</text>`;
+  });
+  rows.forEach((r,i)=>{
+    const[idx,mod,qm,cr,se]=r;
+    const x=2+i*gap,bh=(se/maxSE)*(H-30),y=(H-22)-bh;
+    const col=MOD_HEX[mod]||'#888';const sel=i===selIdx;
+    out+=`<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" fill="${col}" opacity="${sel?1:0.35}" rx="1"/>`;
+    if(sel){
+      out+=`<rect x="${x-1}" y="${(y-1).toFixed(1)}" width="${bw+2}" height="${(bh+2).toFixed(1)}" fill="none" stroke="${col}" stroke-width="1.5" rx="2"/>`;
+      out+=`<text x="${(x+bw/2).toFixed(1)}" y="${(y-3).toFixed(1)}" fill="${col}" font-size="8" font-family="monospace" text-anchor="middle">${se.toFixed(2)}</text>`;
+    }
+    if(idx%4===0||i===rows.length-1)
+      out+=`<text x="${(x+bw/2).toFixed(1)}" y="${H-6}" fill="#4a5370" font-size="7" font-family="monospace" text-anchor="middle">${idx}</text>`;
+  });
+  out+=`<text x="2" y="9" fill="#7e8aaa" font-size="8" font-family="monospace">SE (b/sym)</text>`;
+  out+=`<text x="${W-2}" y="${H-1}" fill="#4a5370" font-size="7" font-family="monospace" text-anchor="end">MCS →</text>`;
+  svg.innerHTML=out;
+  // legend
+  const leg=document.getElementById('chart-leg');leg.innerHTML='';
+  [...new Set(rows.map(r=>r[1]))].forEach(m=>{
+    leg.innerHTML+=`<div class="cli"><div class="cld" style="background:${MOD_HEX[m]}"></div>${m}</div>`;
+  });
+  document.getElementById('chart-tbl').textContent=tbl.short;
+  const sr=rows[selIdx];
+  document.getElementById('chart-sel').textContent=sr?`MCS${sr[0]}  ${sr[1]}  CR=${sr[3]}/1024  SE=${sr[4]}  (${(sr[3]/948*100).toFixed(1)}% of R_max)`:'';
+}
 
-  // slot vis
-  drawSlots(pattern, sDlSyms);
-
-  // stats
-  if (total > 0) {
-    tddStatsEl.textContent =
-      `D=${nD}  S=${nS}(×${sDlSyms}sym)  U=${nU}  |  total=${total} slots  |` +
-      `  DL_equiv = ${dlEq.toFixed(3)}  |  DL ratio = ${(ratio*100).toFixed(2)}%`;
-  } else {
-    tddStatsEl.textContent = 'Enter a pattern using D, U, S characters';
+// ══════════════════════ FULL MCS TABLE
+function drawFullTable(tkey,selIdx){
+  const tbl=TBLS[tkey];
+  document.getElementById('mcs-tbl-name').textContent=tbl.short;
+  document.getElementById('mcs-table-wrap').querySelector('caption')?.remove();
+  const tb=document.getElementById('mcs-tbody');tb.innerHTML='';
+  tbl.rows.forEach((r,i)=>{
+    const[idx,mod,qm,cr,se]=r;
+    const tr=document.createElement('tr');
+    if(i===selIdx)tr.className='sel-row';
+    const pct=(cr/948*100).toFixed(1);
+    const col=MOD_HEX[mod]||'#888';
+    tr.innerHTML=`<td>${idx}</td><td style="color:${col};font-weight:600">${mod}</td>`+
+      `<td>${qm}</td><td>${cr}</td><td>${se.toFixed(4)}</td><td style="color:${col}">${pct}%</td>`;
+    tb.appendChild(tr);
+  });
+  // scroll selected row into view
+  if(selIdx>=0){
+    const selRow=tb.children[selIdx];
+    if(selRow)setTimeout(()=>selRow.scrollIntoView({block:'nearest'}),50);
   }
-
-  // collect layer data
-  const layerData = layers.map(L => L.getValues());
-  if (!layerData.length) { clearResults(); return; }
-
-  const { total: pdrEff, perLayer } = computePDR(layerData, ratio);
-  const { total: pdrFull }          = computePDR(layerData, 1.0);
-
-  // results
-  document.getElementById('res-big').textContent     = pdrEff.toFixed(1);
-  document.getElementById('res-ratio').textContent   = `${ratio.toFixed(4)}  (${(ratio*100).toFixed(1)}%)`;
-  document.getElementById('res-pdr-full').textContent = `${pdrFull.toFixed(2)} Mbps`;
-  document.getElementById('res-pdr-eff').textContent  = `${pdrEff.toFixed(2)} Mbps`;
-  document.getElementById('res-slots').textContent    = total > 0
-    ? `${dlEq.toFixed(2)} / ${total}` : '—';
-
-  // per-layer labels + breakdown
-  const bd = document.getElementById('breakdown');
-  bd.innerHTML = '';
-  layers.forEach((L, i) => {
-    const v = layerData[i];
-    const p = perLayer[i];
-    const muLabel = MU_OPTIONS[MU_OPTIONS.findIndex(m => m.mu === v.mu)].label.trim();
-    const qmLabel = MOD_OPTIONS[MOD_OPTIONS.findIndex(m => m.qm === v.qm)].label.split('(')[0].trim();
-    L.setLabel(`${p.toFixed(2)} Mbps`);
-    const row = document.createElement('div');
-    row.className = 'breakdown-row';
-    row.innerHTML = `
-      <span class="br-left">L${i+1}  v=${v.v}  ${qmLabel}  f=${v.f}  PRB=${v.nprb}  ${muLabel}  OH=${(v.oh*100).toFixed(1)}%</span>
-      <span class="br-right">${p.toFixed(2)} Mbps</span>
-    `;
-    bd.appendChild(row);
-  });
-
-  // param detail (first layer)
-  const L0  = layerData[0];
-  const ts0 = Ts(L0.mu);
-  const pd  = document.getElementById('param-detail');
-  pd.innerHTML = '';
-  const rows = [
-    ['R_max',          `948/1024 = ${R_MAX.toFixed(6)}`],
-    ['T_s^μ  (μ='+L0.mu+')',  `${(ts0*1e6).toFixed(3)} μs`],
-    ['Slots/sec',      `${Math.round(1/ts0/14).toLocaleString()}`],
-    ['RE/slot (L1)',   `${L0.nprb} PRB × 12 sc = ${L0.nprb*12} RE`],
-    ['RE/sec (L1)',    `${(L0.nprb*12/ts0/1e6).toFixed(2)} M RE/s`],
-    ['Bits/RE (L1)',   `Qm=${L0.qm} × f=${L0.f} × R=${R_MAX.toFixed(4)} = ${(L0.qm*L0.f*R_MAX).toFixed(4)}`],
-    ['OH factor',      `(1 − ${(L0.oh*100).toFixed(1)}%) = ${(1-L0.oh).toFixed(4)}`],
-  ];
-  rows.forEach(([k,v]) => {
-    const r = document.createElement('div');
-    r.className = 'pd-row';
-    r.innerHTML = `<span>${k}</span><span class="pd-val">${v}</span>`;
-    pd.appendChild(r);
-  });
-
-  // layer count
-  document.getElementById('layer-count').textContent = `(J = ${layers.length})`;
 }
 
-function clearResults() {
-  ['res-big','res-ratio','res-pdr-full','res-pdr-eff','res-slots'].forEach(
-    id => document.getElementById(id).textContent = '—');
-  document.getElementById('breakdown').innerHTML = '';
-  document.getElementById('param-detail').innerHTML = '';
+// ══════════════════════ MAIN REFRESH
+function refresh(){
+  const pat=document.getElementById('tdd-pat').value;
+  const sDl=Math.min(14,Math.max(0,parseInt(document.getElementById('s-dl').value)||0));
+  const{ratio,nD,nS,nU,total,dlEq}=tddRatio(pat,sDl);
+
+  drawSlots(pat,sDl);
+  document.getElementById('jlbl').textContent=`(J=${layers.length})`;
+  document.getElementById('tdd-stats').textContent=total>0
+    ?`D=${nD}  S=${nS}(×${sDl}sym)  U=${nU}  |  total=${total}  |  DL_equiv=${dlEq.toFixed(3)}  |  DL ratio=${(ratio*100).toFixed(2)}%`
+    :'Enter D/U/S pattern';
+
+  if(!layers.length){clearRes();return;}
+
+  let totPk=0,totMC=0;
+  const vals=layers.map(L=>{
+    const v=L.getV();L.updPills(v);
+    const pk=pdrPeak(v,ratio),mc=pdrMCS(v,ratio);
+    L.updRateBar(v,ratio,pk,mc);
+    totPk+=pk;totMC+=mc;return{v,pk,mc};
+  });
+  const totPkNoTDD=layers.reduce((s,L)=>s+pdrPeak(L.getV(),1),0);
+  const eff=totPk>0?(totMC/totPk*100):0;
+
+  document.getElementById('r-peak').textContent=totPk.toFixed(1);
+  document.getElementById('r-ratio').textContent=`${ratio.toFixed(4)} (${(ratio*100).toFixed(1)}%)`;
+  document.getElementById('r-notdd').textContent=`${totPkNoTDD.toFixed(2)} Mbps`;
+  document.getElementById('r-mcs').textContent=`${totMC.toFixed(2)} Mbps`;
+  document.getElementById('r-eff').textContent=`${eff.toFixed(1)}%`;
+
+  // breakdown
+  const bd=document.getElementById('bdown');bd.innerHTML='';
+  vals.forEach(({v,pk,mc},i)=>{
+    const r=document.createElement('div');r.className='brow';
+    r.innerHTML=`<span class="bl2">L${i+1}  MCS${v.mcs}  ${v.mod}  v=${v.v}  PRB=${v.nprb}  μ=${v.mu}  OH=${(v.oh*100).toFixed(0)}%</span>`+
+      `<span class="br2">${mc.toFixed(2)} / ${pk.toFixed(2)} Mbps</span>`;
+    bd.appendChild(r);
+  });
+
+  // charts for Layer 1
+  const v0=vals[0].v;
+  const tblRows=v0.tbl.rows;
+  const selIdx=tblRows.findIndex(r=>r[0]===v0.mcs);
+  document.getElementById('chart-tname').textContent=`(L1 — ${v0.tbl.short})`;
+  drawChart(v0.key,selIdx>=0?selIdx:0);
+  drawFullTable(v0.key,selIdx>=0?selIdx:0);
+
+  // key params
+  const v=v0,tsv=Ts(v.mu),bps=bitsPS(v);
+  const pd=document.getElementById('pdtbl');pd.innerHTML='';
+  [['MCS index',`${v.mcs}  (${v.tbl.name})`],
+   ['Modulation',`${v.mod}  →  Q_m = ${v.qm} bits/symbol`],
+   ['Code rate CR',`${v.cr}/1024 = ${(v.cr/1024).toFixed(6)}`],
+   ['Spectral eff SE',`Q_m × CR/1024 = ${v.qm} × ${(v.cr/1024).toFixed(4)} = ${v.se.toFixed(4)} b/sym`],
+   ['R_max (Tbl peak)',`948/1024 = ${R_MAX.toFixed(6)}`],
+   ['MCS efficiency',`CR/948 = ${v.cr}/948 = ${(v.cr/948*100).toFixed(2)}%`],
+   ['SE @ R_max',`${v.qm} × R_max = ${(v.qm*R_MAX).toFixed(4)} b/sym`],
+   ['T_s^μ  (μ='+v.mu+')',`${(tsv*1e6).toFixed(3)} μs`],
+   ['Slots / second',`${Math.round(1/tsv/14).toLocaleString()}`],
+   ['Total RE/slot',`${v.nprb}×12×14 = ${v.nprb*168}`],
+   ['RE/slot after OH',`${(v.nprb*168*(1-v.oh)).toFixed(0)}  (OH=${(v.oh*100).toFixed(1)}%)`],
+   ['Bits/slot @ MCS',`${(bps/1000).toFixed(2)} kbits  (${(bps/v.nprb).toFixed(1)} per PRB)`],
+   ['Bits/slot @ R_max',`${(v.nprb*168*(1-v.oh)*v.qm*R_MAX/1000).toFixed(2)} kbits`],
+   ['DL equiv/period',`${dlEq.toFixed(3)} / ${total} slots (${(ratio*100).toFixed(2)}%)`],
+  ].forEach(([k,vv])=>{pd.innerHTML+=`<div class="pdr"><span class="pk">${k}</span><span class="pv">${vv}</span></div>`;});
 }
 
-// ── init
+function clearRes(){
+  ['r-peak','r-ratio','r-notdd','r-mcs','r-eff'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('bdown').innerHTML='';
+  document.getElementById('mcs-svg').innerHTML='';
+  document.getElementById('mcs-tbody').innerHTML='';
+  document.getElementById('pdtbl').innerHTML='';
+}
+
+// init
 addLayer();
+window.addEventListener('resize',()=>{if(layers.length)refresh();});
 </script>
 </body>
 </html>
