@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5G NR PDR Calculator — 3GPP TS 38.306</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:      #0b0e17;
+    --bg2:     #10141f;
+    --bg3:     #161c2d;
+    --bg4:     #1d2438;
+    --bg5:     #232b44;
+    --amber:   #f5a623;
+    --amber2:  #ffc35a;
+    --cyan:    #4fc3f7;
+    --cyan2:   #81d4fa;
+    --green:   #69f0ae;
+    --red:     #ef5350;
+    --fg:      #dde2f0;
+    --fg2:     #7e8aaa;
+    --fg3:     #4a5370;
+    --border:  #222c48;
+    --border2: #2d3a5c;
+    --mono:    'JetBrains Mono', monospace;
+    --sans:    'Inter', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--mono);
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── topbar */
+  #topbar {
+    background: #070a12;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  #topbar .title { color: var(--amber); font-size: 14px; font-weight: 700; }
+  #topbar .sub   { color: var(--fg3);   font-size: 11px; }
+  #topbar .rmax  {
+    margin-left: auto;
+    color: var(--fg2);
+    font-size: 11px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 10px;
+  }
+  #topbar .rmax span { color: var(--cyan); }
+
+  /* ── formula banner */
+  #formula-bar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+  }
+  #formula-bar .eq {
+    color: var(--cyan);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  #formula-bar .sub {
+    color: var(--fg3);
+    font-size: 10px;
+    margin-top: 3px;
+  }
+
+  /* ── main layout */
+  #main {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 0;
+    height: calc(100vh - 90px);
+  }
+
+  #left {
+    overflow-y: auto;
+    padding: 16px 16px 16px 20px;
+    border-right: 1px solid var(--border);
+  }
+
+  #right {
+    overflow-y: auto;
+    padding: 16px 20px 16px 16px;
+    background: var(--bg2);
+  }
+
+  /* ── section headers */
+  .sec-hdr {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .sec-hdr::before { content: '▸'; }
+  .sec-hdr::after  {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .sec-hdr:first-child { margin-top: 0; }
+
+  /* ── cards */
+  .card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+  .card-hdr {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+    padding: 7px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-hdr .layer-name { color: var(--amber); font-size: 12px; font-weight: 700; }
+  .card-hdr .layer-pdr  { color: var(--green); font-size: 11px; }
+  .card-hdr .remove-btn {
+    background: none;
+    border: none;
+    color: var(--red);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    opacity: 0.7;
+    transition: opacity .15s;
+  }
+  .card-hdr .remove-btn:hover { opacity: 1; background: rgba(239,83,80,.1); }
+  .card-body {
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+  }
+
+  /* ── form fields */
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label {
+    font-size: 10px;
+    color: var(--fg2);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .field input, .field select {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus { border-color: var(--cyan); }
+  .field input[type=number]::-webkit-inner-spin-button { opacity: 0.5; }
+  select option { background: var(--bg3); }
+
+  .field.full { grid-column: 1 / -1; }
+
+  /* TDD card */
+  #tdd-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  #tdd-card .row {
+    display: grid;
+    grid-template-columns: 1fr 140px;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  #tdd-card input[type=text] {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    padding: 6px 10px;
+    outline: none;
+    width: 100%;
+    transition: border-color .15s;
+  }
+  #tdd-card input[type=text]:focus { border-color: var(--cyan); }
+  #tdd-card input[type=number] {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 8px;
+    outline: none;
+    width: 100%;
+  }
+  #tdd-stats {
+    color: var(--amber);
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 6px;
+    min-height: 16px;
+  }
+  #tdd-hint { color: var(--fg3); font-size: 10px; margin-top: 2px; }
+
+  /* slot visualiser */
+  #slot-vis-wrap {
+    margin-top: 10px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px;
+  }
+  #slot-vis {
+    display: flex;
+    gap: 2px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .slot-block {
+    flex: 1;
+    min-width: 18px;
+    height: 32px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0;
+    transition: transform .1s;
+    cursor: default;
+    position: relative;
+  }
+  .slot-block:hover { transform: scaleY(1.08); }
+  .slot-block.D { background: #1a3a52; color: var(--cyan); border: 1px solid #2a5a7a; }
+  .slot-block.U { background: #2a1a1a; color: var(--fg3); border: 1px solid #4a2a2a; }
+  .slot-block.S { background: #3a2800; color: var(--amber); border: 1px solid #6a4a00; }
+  .slot-block[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 36px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg5);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 9px;
+    white-space: nowrap;
+    color: var(--fg);
+    z-index: 10;
+  }
+  #slot-vis-legend {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+    font-size: 10px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+  }
+  .legend-dot.D { background: #1a3a52; border: 1px solid #2a5a7a; }
+  .legend-dot.U { background: #2a1a1a; border: 1px solid #4a2a2a; }
+  .legend-dot.S { background: #3a2800; border: 1px solid #6a4a00; }
+
+  /* add layer btn */
+  #add-layer-btn {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px dashed var(--border2);
+    border-radius: 6px;
+    color: var(--cyan2);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 9px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    margin-bottom: 12px;
+  }
+  #add-layer-btn:hover { background: var(--bg4); border-color: var(--cyan); }
+
+  /* ── results panel */
+  #big-result {
+    background: var(--bg3);
+    border: 1px solid var(--amber);
+    border-radius: 8px;
+    padding: 18px 14px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  #big-result .label { color: var(--fg2); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+  #big-result .value { color: var(--amber); font-size: 42px; font-weight: 700; line-height: 1.1; margin: 4px 0 2px; }
+  #big-result .unit  { color: var(--fg2); font-size: 11px; }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .metric {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 8px 10px;
+  }
+  .metric .m-label { color: var(--fg3); font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+  .metric .m-value { color: var(--fg);  font-size: 13px; font-weight: 600; }
+  .metric .m-value.cyan  { color: var(--cyan); }
+  .metric .m-value.green { color: var(--green); }
+
+  /* breakdown table */
+  #breakdown { margin-bottom: 12px; }
+  .breakdown-row {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+  }
+  .breakdown-row .br-left  { color: var(--fg2); }
+  .breakdown-row .br-right { color: var(--green); font-weight: 700; }
+
+  /* param details */
+  #param-detail { font-size: 10px; color: var(--fg3); }
+  #param-detail .pd-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  #param-detail .pd-row:last-child { border-bottom: none; }
+  #param-detail .pd-val { color: var(--cyan2); }
+
+  /* ── responsive */
+  @media (max-width: 800px) {
+    #main { grid-template-columns: 1fr; height: auto; }
+    #right { border-top: 1px solid var(--border); }
+    .card-body { grid-template-columns: 1fr; }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--fg3); }
+</style>
+</head>
+<body>
+
+<!-- topbar -->
+<div id="topbar">
+  <span class="title">5G NR  PDR  Calculator</span>
+  <span class="sub">3GPP TS 38.306 Eq.(1)</span>
+  <span class="rmax">R<sub>max</sub> = 948/1024 = <span>0.92578</span></span>
+</div>
+
+<!-- formula bar -->
+<div id="formula-bar">
+  <div class="eq">PDR = 10⁻⁶ × Σⱼ [ v_Layers(j) · Q_m(j) · f(j) · R_max · (N_PRB(j,μ)·12 / T_s^μ) · (1 − OH(j)) ] × TDD_DL_ratio</div>
+  <div class="sub">T_s^μ = 10⁻³ / (14 × 2^μ) seconds &nbsp;|&nbsp; TDD_DL_ratio = (D_slots + S_slots × sym_DL/14) / total_slots</div>
+</div>
+
+<!-- main -->
+<div id="main">
+
+  <!-- LEFT: inputs -->
+  <div id="left">
+
+    <div class="sec-hdr">TDD Slot Configuration</div>
+
+    <div id="tdd-card">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+        <div class="field">
+          <label>Slot pattern &nbsp;(D = DL, U = UL, S = Special)</label>
+          <input type="text" id="tdd-pattern" value="DDDSUUDDDSUU" maxlength="100"
+                 placeholder="e.g. DDDDDDDSUU" spellcheck="false" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>DL symbols in each S slot (0–14)</label>
+          <input type="number" id="s-dl-syms" value="6" min="0" max="14" step="1">
+        </div>
+      </div>
+      <div id="tdd-hint">
+        Common patterns: &nbsp;
+        <span class="pattern-ex" data-pat="DDDDDDDSUU" style="color:var(--cyan2);cursor:pointer;" title="ms5 TDD, DL:7 UL:2 S:1">DDDDDDDSUU</span> (ms5, 7D·1S·2U) &nbsp;|&nbsp;
+        <span class="pattern-ex" data-pat="DDSUU" style="color:var(--cyan2);cursor:pointer;" title="ms2.5">DDSUU</span> (ms2.5) &nbsp;|&nbsp;
+        <span class="pattern-ex" data-pat="DDDDDDDDDDSUUU" style="color:var(--cyan2);cursor:pointer;">DDDDDDDDDDSUUU</span> (ms10)
+      </div>
+      <div id="tdd-stats">—</div>
+      <div id="slot-vis-wrap">
+        <div id="slot-vis"></div>
+        <div id="slot-vis-legend">
+          <div class="legend-item"><div class="legend-dot D"></div><span style="color:var(--cyan)">D  Downlink</span></div>
+          <div class="legend-item"><div class="legend-dot S"></div><span style="color:var(--amber)">S  Special</span></div>
+          <div class="legend-item"><div class="legend-dot U"></div><span style="color:var(--fg3)">U  Uplink</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-hdr">Component Carriers / Layers <span id="layer-count" style="color:var(--fg2);margin-left:4px;">(J = 1)</span></div>
+
+    <div id="layers-container"></div>
+
+    <button id="add-layer-btn">+ Add Component Carrier / Layer</button>
+
+  </div>
+
+  <!-- RIGHT: results -->
+  <div id="right">
+
+    <div class="sec-hdr">Effective PDR</div>
+
+    <div id="big-result">
+      <div class="label">Peak Data Rate</div>
+      <div class="value" id="res-big">—</div>
+      <div class="unit">Mbps  (PHY layer, DL peak)</div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric">
+        <div class="m-label">TDD DL ratio</div>
+        <div class="m-value cyan" id="res-ratio">—</div>
+      </div>
+      <div class="metric">
+        <div class="m-label">PDR (no TDD)</div>
+        <div class="m-value" id="res-pdr-full">—</div>
+      </div>
+      <div class="metric">
+        <div class="m-label">PDR × TDD</div>
+        <div class="m-value green" id="res-pdr-eff">—</div>
+      </div>
+      <div class="metric">
+        <div class="m-label">DL slots / period</div>
+        <div class="m-value" id="res-slots">—</div>
+      </div>
+    </div>
+
+    <div class="sec-hdr">Per-Layer Breakdown</div>
+    <div id="breakdown"></div>
+
+    <div class="sec-hdr">Key Parameters</div>
+    <div id="param-detail"></div>
+
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ── constants
+const R_MAX = 948 / 1024;
+
+const MOD_OPTIONS = [
+  { label: "QPSK  (Qm = 2)",    qm: 2 },
+  { label: "16-QAM  (Qm = 4)",  qm: 4 },
+  { label: "64-QAM  (Qm = 6)",  qm: 6 },
+  { label: "256-QAM  (Qm = 8)", qm: 8 },
+];
+
+const MU_OPTIONS = [
+  { label: "μ=0   15 kHz",  mu: 0 },
+  { label: "μ=1   30 kHz",  mu: 1 },
+  { label: "μ=2   60 kHz",  mu: 2 },
+  { label: "μ=3  120 kHz",  mu: 3 },
+];
+
+const F_OPTIONS = [1.0, 0.8, 0.75, 0.4];
+
+const OH_PRESETS = {
+  "DL FR1  14%": 14,
+  "DL FR2  18%": 18,
+  "UL FR1   8%": 8,
+  "UL FR2  10%": 10,
+  "Custom":      14,
+};
+
+// ── physics
+function Ts(mu) { return 1e-3 / (14 * Math.pow(2, mu)); }
+
+function tddRatio(pattern, sDlSyms) {
+  const pat = pattern.trim().toUpperCase();
+  if (!pat) return { ratio: 1, nD: 0, nS: 0, nU: 0, total: 0, dlEq: 0 };
+  let nD = 0, nS = 0, nU = 0;
+  for (const ch of pat) {
+    if (ch === 'D') nD++;
+    else if (ch === 'S') nS++;
+    else if (ch === 'U') nU++;
+  }
+  const total = pat.length;
+  const dlEq  = nD + nS * (sDlSyms / 14);
+  return { ratio: dlEq / total, nD, nS, nU, total, dlEq };
+}
+
+function computePDR(layers, ratio) {
+  let total = 0;
+  const perLayer = layers.map(L => {
+    const ts   = Ts(L.mu);
+    const bits = L.v * L.qm * L.f * R_MAX * (L.nprb * 12 / ts) * (1 - L.oh);
+    const val  = 1e-6 * bits * ratio;
+    total += val;
+    return val;
+  });
+  return { total, perLayer };
+}
+
+// ── layer management
+let layerIdCounter = 0;
+let layers = [];  // [{id, el, getValues}]
+
+function createLayerCard(id) {
+  const num = id;
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = id;
+
+  // header
+  const hdr = document.createElement('div');
+  hdr.className = 'card-hdr';
+  hdr.innerHTML = `
+    <span class="layer-name">Layer ${num}</span>
+    <span class="layer-pdr" id="lpdr-${id}"></span>
+    <button class="remove-btn" title="Remove layer">✕ remove</button>
+  `;
+  hdr.querySelector('.remove-btn').addEventListener('click', () => removeLayer(id));
+
+  // body
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  function sel(label, opts, val, onChange) {
+    const d = document.createElement('div');
+    d.className = 'field';
+    const lbl = document.createElement('label');
+    lbl.textContent = label;
+    const s = document.createElement('select');
+    opts.forEach((o, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = typeof o === 'string' ? o : o.label;
+      if ((typeof o === 'object' && o.default) || val === i) opt.selected = true;
+      s.appendChild(opt);
+    });
+    s.addEventListener('change', onChange);
+    d.appendChild(lbl); d.appendChild(s);
+    return { el: d, sel: s };
+  }
+
+  function num_field(label, def, min, max, step, onChange, full=false) {
+    const d = document.createElement('div');
+    d.className = full ? 'field full' : 'field';
+    const lbl = document.createElement('label');
+    lbl.textContent = label;
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.value = def;
+    inp.min = min; inp.max = max; inp.step = step;
+    inp.addEventListener('input', onChange);
+    d.appendChild(lbl); d.appendChild(inp);
+    return { el: d, inp };
+  }
+
+  const cb = () => refresh();
+
+  // v_Layers
+  const vF = num_field('v_Layers  (MIMO layers)', 1, 1, 8, 1, cb);
+
+  // Modulation
+  const qmF = sel('Modulation  Q_m', MOD_OPTIONS.map(o=>o.label), 3, cb);
+  qmF.sel.selectedIndex = 3; // 256-QAM default
+
+  // f scaling
+  const fF = sel('f  (scaling factor)', F_OPTIONS.map(String), 0, cb);
+
+  // N_PRB
+  const nprbF = num_field('N_PRB  (allocated PRBs)', 217, 1, 275, 1, cb);
+
+  // SCS mu
+  const muF = sel('SCS  μ', MU_OPTIONS.map(o=>o.label), 1, cb);
+  muF.sel.selectedIndex = 1; // 30kHz default
+
+  // OH preset
+  const ohPresetF = sel('OH overhead  (preset)', Object.keys(OH_PRESETS), 0, () => {
+    const preset = Object.keys(OH_PRESETS)[parseInt(ohPresetF.sel.value)];
+    if (preset !== 'Custom') {
+      ohValF.inp.value = OH_PRESETS[preset];
+    }
+    cb();
+  });
+
+  // OH value
+  const ohValF = num_field('OH value  (%)', 14, 0, 50, 0.5, cb);
+
+  [vF, qmF, fF, nprbF, muF, ohPresetF, ohValF].forEach(f => body.appendChild(f.el));
+
+  card.appendChild(hdr);
+  card.appendChild(body);
+
+  function getValues() {
+    return {
+      v:    parseInt(vF.inp.value)    || 1,
+      qm:   MOD_OPTIONS[parseInt(qmF.sel.value)].qm,
+      f:    F_OPTIONS[parseInt(fF.sel.value)],
+      nprb: parseInt(nprbF.inp.value) || 1,
+      mu:   MU_OPTIONS[parseInt(muF.sel.value)].mu,
+      oh:   (parseFloat(ohValF.inp.value) || 0) / 100,
+    };
+  }
+
+  return { id, el: card, getValues,
+           setLabel: (txt) => { document.getElementById(`lpdr-${id}`).textContent = txt; } };
+}
+
+function addLayer() {
+  layerIdCounter++;
+  const L = createLayerCard(layerIdCounter);
+  layers.push(L);
+  document.getElementById('layers-container').appendChild(L.el);
+  refresh();
+}
+
+function removeLayer(id) {
+  if (layers.length <= 1) return;
+  layers = layers.filter(L => L.id !== id);
+  const el = document.querySelector(`.card[data-id="${id}"]`);
+  if (el) el.remove();
+  refresh();
+}
+
+// ── TDD inputs
+const tddPatEl   = document.getElementById('tdd-pattern');
+const sDlSymsEl  = document.getElementById('s-dl-syms');
+const tddStatsEl = document.getElementById('tdd-stats');
+const slotVisEl  = document.getElementById('slot-vis');
+
+tddPatEl.addEventListener('input', refresh);
+sDlSymsEl.addEventListener('input', refresh);
+
+// pattern shortcuts
+document.querySelectorAll('.pattern-ex').forEach(el => {
+  el.addEventListener('click', () => {
+    tddPatEl.value = el.dataset.pat;
+    refresh();
+  });
+});
+
+// ── slot visualiser
+function drawSlots(pattern, sDlSyms) {
+  const pat = pattern.trim().toUpperCase();
+  slotVisEl.innerHTML = '';
+  if (!pat) return;
+  for (const ch of pat) {
+    const blk = document.createElement('div');
+    blk.className = `slot-block ${['D','U','S'].includes(ch) ? ch : 'U'}`;
+    blk.textContent = ch;
+    let tip = '';
+    if (ch === 'D') tip = 'Full DL  (14/14 sym)';
+    else if (ch === 'U') tip = 'Full UL  (0/14 DL sym)';
+    else if (ch === 'S') tip = `Special  (${sDlSyms}/14 DL sym)`;
+    blk.title = tip;
+    slotVisEl.appendChild(blk);
+  }
+}
+
+// ── main refresh
+function refresh() {
+  const pattern  = tddPatEl.value;
+  const sDlSyms  = Math.min(14, Math.max(0, parseInt(sDlSymsEl.value) || 0));
+  const { ratio, nD, nS, nU, total, dlEq } = tddRatio(pattern, sDlSyms);
+
+  // slot vis
+  drawSlots(pattern, sDlSyms);
+
+  // stats
+  if (total > 0) {
+    tddStatsEl.textContent =
+      `D=${nD}  S=${nS}(×${sDlSyms}sym)  U=${nU}  |  total=${total} slots  |` +
+      `  DL_equiv = ${dlEq.toFixed(3)}  |  DL ratio = ${(ratio*100).toFixed(2)}%`;
+  } else {
+    tddStatsEl.textContent = 'Enter a pattern using D, U, S characters';
+  }
+
+  // collect layer data
+  const layerData = layers.map(L => L.getValues());
+  if (!layerData.length) { clearResults(); return; }
+
+  const { total: pdrEff, perLayer } = computePDR(layerData, ratio);
+  const { total: pdrFull }          = computePDR(layerData, 1.0);
+
+  // results
+  document.getElementById('res-big').textContent     = pdrEff.toFixed(1);
+  document.getElementById('res-ratio').textContent   = `${ratio.toFixed(4)}  (${(ratio*100).toFixed(1)}%)`;
+  document.getElementById('res-pdr-full').textContent = `${pdrFull.toFixed(2)} Mbps`;
+  document.getElementById('res-pdr-eff').textContent  = `${pdrEff.toFixed(2)} Mbps`;
+  document.getElementById('res-slots').textContent    = total > 0
+    ? `${dlEq.toFixed(2)} / ${total}` : '—';
+
+  // per-layer labels + breakdown
+  const bd = document.getElementById('breakdown');
+  bd.innerHTML = '';
+  layers.forEach((L, i) => {
+    const v = layerData[i];
+    const p = perLayer[i];
+    const muLabel = MU_OPTIONS[MU_OPTIONS.findIndex(m => m.mu === v.mu)].label.trim();
+    const qmLabel = MOD_OPTIONS[MOD_OPTIONS.findIndex(m => m.qm === v.qm)].label.split('(')[0].trim();
+    L.setLabel(`${p.toFixed(2)} Mbps`);
+    const row = document.createElement('div');
+    row.className = 'breakdown-row';
+    row.innerHTML = `
+      <span class="br-left">L${i+1}  v=${v.v}  ${qmLabel}  f=${v.f}  PRB=${v.nprb}  ${muLabel}  OH=${(v.oh*100).toFixed(1)}%</span>
+      <span class="br-right">${p.toFixed(2)} Mbps</span>
+    `;
+    bd.appendChild(row);
+  });
+
+  // param detail (first layer)
+  const L0  = layerData[0];
+  const ts0 = Ts(L0.mu);
+  const pd  = document.getElementById('param-detail');
+  pd.innerHTML = '';
+  const rows = [
+    ['R_max',          `948/1024 = ${R_MAX.toFixed(6)}`],
+    ['T_s^μ  (μ='+L0.mu+')',  `${(ts0*1e6).toFixed(3)} μs`],
+    ['Slots/sec',      `${Math.round(1/ts0/14).toLocaleString()}`],
+    ['RE/slot (L1)',   `${L0.nprb} PRB × 12 sc = ${L0.nprb*12} RE`],
+    ['RE/sec (L1)',    `${(L0.nprb*12/ts0/1e6).toFixed(2)} M RE/s`],
+    ['Bits/RE (L1)',   `Qm=${L0.qm} × f=${L0.f} × R=${R_MAX.toFixed(4)} = ${(L0.qm*L0.f*R_MAX).toFixed(4)}`],
+    ['OH factor',      `(1 − ${(L0.oh*100).toFixed(1)}%) = ${(1-L0.oh).toFixed(4)}`],
+  ];
+  rows.forEach(([k,v]) => {
+    const r = document.createElement('div');
+    r.className = 'pd-row';
+    r.innerHTML = `<span>${k}</span><span class="pd-val">${v}</span>`;
+    pd.appendChild(r);
+  });
+
+  // layer count
+  document.getElementById('layer-count').textContent = `(J = ${layers.length})`;
+}
+
+function clearResults() {
+  ['res-big','res-ratio','res-pdr-full','res-pdr-eff','res-slots'].forEach(
+    id => document.getElementById(id).textContent = '—');
+  document.getElementById('breakdown').innerHTML = '';
+  document.getElementById('param-detail').innerHTML = '';
+}
+
+// ── init
+addLayer();
+</script>
+</body>
+</html>
